@@ -91,7 +91,7 @@ class Env:
 
 
     def hour_reader(self):
-        csv_filename = 'new_rush_hour_1000.csv'
+        csv_filename = 'mix_rush_hour_50pec.csv'
         with open(csv_filename, mode='r', newline='') as csv_file:
             csv_reader = csv.reader(csv_file)
             for row in csv_reader:
