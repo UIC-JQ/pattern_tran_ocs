@@ -250,20 +250,18 @@ def store_data_baseline(t_list,group_size):
 
 def main():
     agent = PPO()
+    return_reward_list = []
+    save_per_time_list = []
 
-    return_list = []
-    # 保存优化的值
-    total_times = []
-    total_energys = []
     #save loss
     value_loss = []
     policy_loss = []
 
-    #选择最小的打出来
+    #save data
     save_energy_ep = []
     save_time_ep = []
 
-    for i_epoch in tqdm(range(150)):
+    for i_epoch in tqdm(range(10000)):
         # ppo
         ep_reward = []
         ep_energy = []
@@ -324,55 +322,34 @@ def main():
 
 
             if not env.task: #queue里的task耗尽，计算所有数值
-                return_list.append(np.mean(ep_reward))
-                
-                # total_times.append(env.total_time/cnt)
-                # total_energys.append(env.total_energy/cnt)
-                # total_energys.append(env.total_energy/cnt)
+                #save data
+                return_reward_list.append(np.mean(ep_reward))
+                save_energy_ep.append(np.mean(ep_energy))
+                save_time_ep.append(np.mean(ep_time))
 
-                #ppo
-                total_times_ep = []
-                total_energys_ep = []
-                total_energys_ep = store_data_baseline(ep_energy,cnt)
-                total_times_ep = store_data_baseline(ep_time,cnt)
+                save_per_time_list.append(sum(ep_time))
+    
+                # the output of the current episode
+                #print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), total_times_ep, total_energys_ep))
+                print("final min energy cost: ",np.mean(save_energy_ep[-100:]))
+                print("final min time cost: ",np.mean(save_time_ep[-100:]))
+                print("final reward: ",np.mean(return_reward_list[-100:]))
 
-                #抽取最近的50个数的均值作为输出 -->可以改为不用均值直接最小
-                save_energy_ep.append(np.mean(total_energys_ep))
-                save_time_ep.append(np.mean(total_times_ep))
-                print('Episode: {}, reward: {}, total_time: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(total_times_ep[-50:])))
-                print("final result energy cost: ",min(save_energy_ep[-50:]))
-                print("final result time cost: ",min(save_time_ep[-50:]))
-                break
-    return return_list, value_loss, policy_loss  
+
+    return return_reward_list, save_per_time_list,env.file_name
             
 if __name__ == '__main__':
+    per_slot_time = []
+    _,per_slot_time,file_name = main()
+    csv_filename = 'per_time'+file_name+'.csv'
+    with open(csv_filename, mode='w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        for value in tqdm(per_slot_time):
+            csv_writer.writerow(value)
 
-    _,V_Loss,P_Loss = main()
+ 
 
-    # 指定要保存的CSV文件名
-    # csv_filename1 = 'v_loss_data.csv'
-    # csv_filename2 = 'ac_loss_data.csv'
-    # # 将数组逐行写入CSV文件
-    # with open(csv_filename, mode='w', newline='') as csv_file:
-    #     csv_writer = csv.writer(csv_file)
-    #     csv_writer.writerow(["iterations","reward"])
-    #     for i, value in tqdm(enumerate(reward, start=1)):
-    #         csv_writer.writerow([i, value])
 
-    #print(len(V_Loss))
-    # with open(csv_filename1, mode='w', newline='') as csv_file:
-    #     csv_writer = csv.writer(csv_file)
-    #     csv_writer.writerow(["iterations","value_loss"])
-    #     for i, value in tqdm(enumerate(V_Loss, start=1)):
-    #         csv_writer.writerow([i, value])
-    
-
-    # with open(csv_filename2, mode='w', newline='') as csv_file:
-    #     csv_writer = csv.writer(csv_file)
-    #     csv_writer.writerow(["iterations","ac_loss"])
-    #     for i, value in tqdm(enumerate(P_Loss, start=1)):
-    #         csv_writer.writerow([i, value])
-    
 
 
  

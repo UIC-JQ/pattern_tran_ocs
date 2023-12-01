@@ -22,3 +22,4 @@ try list
 # find bugs
 - baseline实现错误 all local 不应该都是 1 相当于都传到节点1 了
 - 关于action_prob的作用
+- 老版本ppo 实现有问题，带上baseline就会变不对

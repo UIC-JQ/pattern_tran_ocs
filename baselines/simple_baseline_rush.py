@@ -324,10 +324,12 @@ def main():
                 total_times_r = store_data_baseline(ran_time,cnt)
 
 
-                #print('Episode: {}, reward: {}, total_time: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(total_times_ep[-50:])))
-                print('all local: total_energy: {}, total_time: {}'.format(np.mean(total_energys_l),np.mean(total_times_l)))
-                print('all edge: total_energy: {},total_time: {}'.format(np.mean(total_energys_e),np.mean(total_times_e)))
-                print('random: total_energy: {},total_time: {}'.format(np.mean(total_energys_r), np.mean(total_times_r)))
+                print('Episode: {}, reward: {}, total_time: {}'.format(i_epoch, round(np.mean(
+                    
+                ), 3), np.mean(total_times_ep[-50:])))
+                # print('all local: total_energy: {}, total_time: {}'.format(np.mean(total_energys_l),np.mean(total_times_l)))
+                # print('all edge: total_energy: {},total_time: {}'.format(np.mean(total_energys_e),np.mean(total_times_e)))
+                # print('random: total_energy: {},total_time: {}'.format(np.mean(total_energys_r), np.mean(total_times_r)))
 
                 break
     return return_list, value_loss, policy_loss  

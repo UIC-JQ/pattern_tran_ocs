@@ -173,48 +173,39 @@ class PPO():
         return np.mean(actor_losses), np.mean(value_losses)
 
 
-def store_data_baseline(t_list,group_size):
-    l_result = []
-    # 定义每个组的大小
-    # 循环遍历列表
-    for i in range(0, len(t_list), group_size):
-        group = t_list[i:i + group_size]  # 获取当前组
-        group_avg = sum(group)/group_size  # 计算当前组的总和
-        l_result.append(group_avg)  # 将总和添加到结果列表中
-
-    return l_result
-
 def main():
     agent = PPO()
-    return_list = []
+    return_reward_list = []
+
 
     #save loss
     value_loss = []
     policy_loss = []
 
-    #选择最小的打出来
+    #save time and energy
     save_energy_ep = []
     save_time_ep = []
+    save_per_time_list = []
 
-    for i_epoch in tqdm(range(800)):
+    for i_epoch in tqdm(range(1100)):
         #ppo
         ep_reward = []
         ep_energy = []
         ep_time = []
 
 
+
         ep_action_prob = 0
         env.reset(i_epoch) # reset the env
 
-        cnt = 0
+        cnt = 0 #the task number in one ep
         for t in count():
             # done, upgrade, idx = env.env_up()
             env.env_up()
             # task不为空且 第一个task开始执行
 
             while env.task and env.task[0].start_time == env.time:
-            #循环内说明正在执行某一个时段内同时产生的任务，cnt从进入到出循环差值小于13
-            #while env.task:
+            #Execute tasks generated in the same time slot during the loop execution.
                     cnt += 1
                     curr_task = env.task.pop(0)
                     # ----------ppo--------------
@@ -244,6 +235,7 @@ def main():
 
                     # PPO save data
                     ep_reward.append(reward)
+
                     ep_action_prob += action_prob
                     ep_energy.append(energy)
                     ep_time.append(time)
@@ -262,31 +254,39 @@ def main():
                     # ----------ppo--------------
                     
 
-            
-            if not env.task: #queue里的task耗尽，计算所有数值
-                return_list.append(np.mean(ep_reward))
-                # total_times.append(env.total_time/cnt) 
-                # total_energys.append(env.total_energy/cnt)
-               
-                #ppo
-                total_times_ep = []
-                total_energys_ep = []
-                total_energys_ep = store_data_baseline(ep_energy,cnt) #the enegry cost of one ep
-                total_times_ep = store_data_baseline(ep_time,cnt) #the time cost of one ep
 
-                #抽取最近的50个数的均值作为输出 -->可以改为不用均值直接最小
-                save_energy_ep.append(np.mean(total_energys_ep))
-                save_time_ep.append(np.mean(total_times_ep))
-                print('Episode: {}, reward: {}, total_time: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(total_times_ep[-50:])))
-                print("final result energy cost: ",min(save_energy_ep[-50:]))
-                print("final result time cost: ",min(save_time_ep[-50:]))
+            if not env.task: # in one episode, tasks have been consumed, save the data."
+
+                #save data
+                return_reward_list.append(np.mean(ep_reward))
+                save_energy_ep.append(np.mean(ep_energy))
+                save_time_ep.append(np.mean(ep_time))
+
+                save_per_time_list.append(sum(ep_time))
+    
+
+
+                # the output of the current episode
+                #print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), total_times_ep, total_energys_ep))
+                print("final min energy cost: ",np.mean(save_energy_ep[-100:]))
+                print("final min time cost: ",np.mean(save_time_ep[-100:]))
+                print("final reward: ",np.mean(return_reward_list[-100:]))
+
+
                 break
-    #return return_list, value_loss, policy_loss 
-    return return_list,
+
+    return return_reward_list, save_per_time_list, env.file_name
             
 if __name__ == '__main__':
+    per_time_list = []
+    _,per_time_list, file_name= main()
 
-    _ = main()
+    csv_filename = 'per_time'+file_name+'.csv'
+    with open(csv_filename, mode='w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        for value in tqdm(per_time_list):
+            csv_writer.writerow(value)
+
  
     
 

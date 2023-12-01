@@ -1,12 +1,14 @@
 import numpy as np
 import torch
+import random
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+
 from collections import namedtuple
 from itertools import count
-from env_no_pattern import Env
+from env_rush_baseline import Env
 import config
 
 from tqdm import tqdm
@@ -80,8 +82,10 @@ class Transformer_Model(nn.Module):
 
     def forward(self, node_f, task_f, b_s):
 
+        node_f = torch.tensor(node_f, dtype=torch.float).unsqueeze(0).to(device)
+        task_f = torch.tensor(task_f, dtype=torch.float).to(device)
 
-        assert node_f.shape[1] == 7,f"the shape of the input is{node_f.shape}" # test feature_dim if it's 7
+        assert node_f.shape[1] == 7 # test feature_dim if it's 7
         norm_x = self.input_batch_norm(node_f) 
         norm_x = norm_x.reshape(b_s, -1, feature_dim)  # 为了匹配Linear和Transformer的输入维度
         norm_x = nn.functional.leaky_relu(self.input_hidden(norm_x))
@@ -97,6 +101,7 @@ class Transformer_Model(nn.Module):
         x_h = nn.functional.sigmoid(self.output(enc_hiddens))
         node_f = node_f.reshape(b_s, -1)
 
+        assert task_f.shape == torch.Size([2]),f"the transformer input of task shape is {task_f.shape}"
         task_f = F.leaky_relu(self.fc1(task_f))
         task_f = F.leaky_relu(self.fc2(task_f)) 
         task_f = task_f.reshape(b_s,-1)
@@ -143,9 +148,6 @@ class PPO():
 
     def select_action(self, task, node_f, task_f): 
         gen_action_b_s = 1
-        node_f = torch.tensor(node_f, dtype=torch.float).unsqueeze(0).to(device)
-        task_f = torch.tensor(task_f, dtype=torch.float).to(device)
-
         state= self.embed_net(node_f, task_f, gen_action_b_s) #过transformer,此时b_s为1，输出为1*84
         with torch.no_grad():
             # action_prob = torch.mul(self.actor_net(state), action_mask)
@@ -162,27 +164,19 @@ class PPO():
         return self.counter % self.buffer_capacity == 0
 
     def update(self):
-        #state = torch.tensor([t.state for t in self.buffer], dtype=torch.float).to(device)
+        state = torch.tensor([t.state for t in self.buffer], dtype=torch.float).to(device)
         #state_encoder = state.reshape(1000,7,6)
-        state = [t.state for t in self.buffer] 
-        state = torch.stack(state)
-
-        assert state.shape == torch.Size([1000, 1, 44]), f"the shape is{state.shape}"
-        node_f = state[:, :, :42]  # shape is (1000, 1, 42)
-        task_f = state[:, :, 42:]   # shape is (1000, 1, 2)
-        assert node_f.shape == torch.Size([1000, 1, 42]), f"the shape is{state.shape}"
-        node_f = node_f.view(1000,7,6).squeeze(0)
-        assert node_f.shape == torch.Size([1000, 7, 6]), f"the shape is{state.shape}"
-       
-        state = self.embed_net(node_f,task_f,1000)
- 
+        assert state.shape == torch.Size([1000, 7, 6]), f"the shape is{state.shape}"
+        state = self.embed_net(state,1000)
         #action = torch.tensor([t.action for t in self.buffer], dtype=torch.long).view(-1, 1).to(device)
         reward = [t.reward for t in self.buffer]
+
         R = 0
         Gt = []
         for r in reward[::-1]:
             R = r + 0.98 * R
             Gt.insert(0, R)
+
         Gt = torch.tensor(Gt, dtype=torch.float).to(device)
 
         actor_losses = []
@@ -194,7 +188,9 @@ class PPO():
         for _ in range(self.ppo_epoch):
             for index in BatchSampler(
                 SubsetRandomSampler(range(self.buffer_capacity)), self.batch_size, False):
+
                 Gt_index = Gt[index].view(-1, 1)
+
                 V = self.critic_net(state[index]) # critic network
 
                 delta = Gt_index - V # δt = rt + γV (st+1) − V (st)
@@ -214,7 +210,7 @@ class PPO():
                 self.actor_optimizer.step()
 
                 value_loss = F.mse_loss(Gt_index, V)
-                # value_loss_lr = self.critic_net_optimizer.param_groups[0]['lr'] * value_loss
+                value_loss_lr = self.critic_net_optimizer.param_groups[0]['lr'] * value_loss
                 # print(f"value_loss_lr is {value_loss_lr}")
                
                 self.critic_net_optimizer.zero_grad()
@@ -253,19 +249,26 @@ def main():
     value_loss = []
     policy_loss = []
 
-    #选择最小的打出来
-    save_energy_ep = []
-    save_time_ep = []
+
 
     for i_epoch in tqdm(range(150)):
-        #ppo
-        ep_reward = []
-        ep_energy = []
-        ep_time = []
+
+        #all local
+        lcl_reward = []
+        lcl_energy = []
+        lcl_time = []
+        #all egde
+        edg_reward = []
+        edg_energy = []
+        edg_time = []
+        #all random
+        ran_reward = []
+        ran_energy = []
+        ran_time = []
+
         
         ep_action_prob = 0
-        # env.reset(i_epoch) #重置环境 节点全部重新更新
-        env.reset() #重置环境 节点全部重新更新
+        env.reset(i_epoch) #重置环境 节点全部重新更新
         cnt = 0
         for t in count():
             # done, upgrade, idx = env.env_up()
@@ -273,77 +276,39 @@ def main():
             # task不为空且 第一个task开始执行
 
             while env.task and env.task[0].start_time == env.time:
-            #循环内说明正在执行某一个时段内同时产生的任务，cnt从进入到出循环差值小于13
-            #while env.task:
+                    # print(len(env.task))
+
                     cnt += 1
                     curr_task = env.task.pop(0)
-                    # ----------ppo--------------
-                    # get current state
-                    node_f,task_f = env.get_obs(curr_task)
 
-                    # Select action at according to πθ (at | st )
-                    # action: node index -> TODO: {0, 1}
-                    action, action_prob = agent.select_action(curr_task,node_f,task_f)
-                    node_f = torch.tensor(node_f, dtype=torch.float).to(device)
-                    node_f = node_f.reshape(1,f_tran)
-                    task_f = torch.tensor(task_f, dtype=torch.float).to(device)
-                    task_f = task_f.reshape(1,f_task)
-                    state = torch.cat((node_f,task_f), dim=1)
-                    assert state.shape[1] == f_tran+f_task,f"the state shape is{state.shape}"
+                    # all edge 
+                    _,_, reward_e,energy_e,time_e = env.step(curr_task, 0)
+                    edg_reward.append(reward_e)
+                    edg_energy.append(energy_e)
+                    edg_time.append(time_e)
 
-                    # 1.Execute action at and obtain the reward rt
-                    # 2.Get the next state st+1 
-                    node_f,task_f,reward,energy,time= env.step(curr_task, action)
-                    node_f = torch.tensor(node_f, dtype=torch.float).to(device)
-                    node_f = node_f.reshape(1,f_tran)
-                    task_f = torch.tensor(task_f, dtype=torch.float).to(device)
-                    task_f = task_f.reshape(1,f_task)
-                    next_state = torch.cat((node_f,task_f), dim=1)
-                    assert next_state.shape[1] == f_tran+f_task,f"the next state shape is{next_state.shape}"
-
-                    # PPO save data
-                    ep_reward.append(reward)
-                    ep_action_prob += action_prob
-                    ep_energy.append(energy)
-                    ep_time.append(time)
-                    # ep_utility.append(0.5*energy+0.5*time)
-                    # Store transition (st , at , rt , st+1 ) in D
-                    trans = Transition(state, action, reward, action_prob, next_state)
-
-                    # for training step ....
-                    if agent.store_transition(trans):
-                        ac_loss, v_loss = agent.update()
-                        value_loss.append(v_loss)
-                        policy_loss.append(ac_loss)
-                        # print('ac_loss', ac_loss)
-                        # print('v_loss', v_loss)
-                    # ----------ppo-------------- 
 
 
             if not env.task: #queue里的task耗尽，计算所有数值
-                return_list.append(np.mean(ep_reward))
-                
-                # total_times.append(env.total_time/cnt)
-                # total_energys.append(env.total_energy/cnt)
-                # total_energys.append(env.total_energy/cnt)
 
-                #ppo
-                total_times_ep = []
-                total_energys_ep = []
-                total_energys_ep = store_data_baseline(ep_energy,cnt)
-                total_times_ep = store_data_baseline(ep_time,cnt)
+                #all edge
+                total_times_e = []
+                total_energys_e = []
+                total_energys_e = store_data_baseline(edg_energy,cnt)
+                total_times_e = store_data_baseline(edg_time,cnt)
 
-                #抽取最近的50个数的均值作为输出 -->可以改为不用均值直接最小
-                save_energy_ep.append(np.mean(total_energys_ep))
-                save_time_ep.append(np.mean(total_times_ep))
-                print('Episode: {}, reward: {}, total_time: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(total_times_ep[-50:])))
-                print("final result energy cost: ",min(save_energy_ep[-50:]))
-                print("final result time cost: ",min(save_time_ep[-50:]))
+
+                print('Episode: {}, reward: {}, total_time: {}'.format(i_epoch, round(np.mean(), 3), np.mean(total_times_ep[-50:])))
+                # print('all local: total_energy: {}, total_time: {}'.format(np.mean(total_energys_l),np.mean(total_times_l)))
+                # print('all edge: total_energy: {},total_time: {}'.format(np.mean(total_energys_e),np.mean(total_times_e)))
+                # print('random: total_energy: {},total_time: {}'.format(np.mean(total_energys_r), np.mean(total_times_r)))
+
                 break
     return return_list, value_loss, policy_loss  
             
 if __name__ == '__main__':
-
+    # main()
+    #reward = main()
     _,V_Loss,P_Loss = main()
 
     # 指定要保存的CSV文件名

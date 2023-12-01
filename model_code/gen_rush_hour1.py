@@ -102,7 +102,43 @@ def gen3():
         for value in tqdm(dataset):
             csv_writer.writerow(value)
 
+def gen4():
+    ep = 1100
+    # ratio of pattern
+    ratio = 1
+    slot_per_ep = 200
+    dataset = []
+    for _ in range(int(ep*ratio)):
+        x = np.linspace(1, slot_per_ep, slot_per_ep)
+        mu, sigma = np.random.uniform()*200, np.random.uniform()*80
+        pdf_value = norm.pdf(x, mu, sigma) 
+        pdf_value = np.round(pdf_value*1000)
+
+        dataset.append(pdf_value)
+        #print(len(pdf_value))
+    #     print(sum(pdf_value))
+    # plt.plot(x, pdf_value)
+    # plt.title('Normal Distribution PDF')
+    # plt.xlabel('Values')
+    # plt.ylabel('Probability Density')
+    # plt.show()
+    for _ in range(int(ep*(1-ratio))):
+        temp = []
+        for _ in range(slot_per_ep):
+            k = np.random.randint(0,13)
+            temp.append(k)
+        #print(sum(temp))
+        dataset.append(temp)
+        #print(len(temp))
+    np.random.shuffle(dataset)
 
 
+    # Specify the CSV file name for saving
+    csv_filename = 'mix_rush_hour_{}pec.csv'.format(ratio)
+    with open(csv_filename, mode='w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        for value in tqdm(dataset):
+            csv_writer.writerow(value)
 
-gen2()
+
+gen4()

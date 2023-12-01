@@ -88,10 +88,11 @@ class Env:
         self.total_energy = 0
 
         self.task_finish_list = []
+        self.file_name = 'mix_rush_hour_0pec'
 
 
     def hour_reader(self):
-        csv_filename = 'mix_rush_hour_50pec.csv'
+        csv_filename =  self.file_name+'.csv'
         with open(csv_filename, mode='r', newline='') as csv_file:
             csv_reader = csv.reader(csv_file)
             for row in csv_reader:

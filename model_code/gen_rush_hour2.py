@@ -4,44 +4,26 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 from tqdm import tqdm
 import csv
-def test1():
-    ep = 1100
-    # ratio of pattern
-    ratio = 0.5
-    slot_per_ep = 200
+
+def test():
     dataset = []
-    for _ in range(int(ep*ratio)):
+    ep = 1
+    slot_per_ep = 200
+    for _ in range(ep):
         x = np.linspace(1, slot_per_ep, slot_per_ep)
-        mu, sigma = np.random.uniform()*100, np.random.uniform()*20
+        mu, sigma = np.random.uniform()*20, np.random.uniform()*70
         pdf_value = norm.pdf(x, mu, sigma) 
         pdf_value = np.round(pdf_value*1000)+np.random.choice([1,2,3,4,5])
 
         dataset.append(pdf_value)
         #print(len(pdf_value))
         print(sum(pdf_value))
-    # plt.plot(x, pdf_value)
-    # plt.title('Normal Distribution PDF')
-    # plt.xlabel('Values')
-    # plt.ylabel('Probability Density')
-    # plt.show()
-    for _ in range(int(ep*(1-ratio))):
-        temp = []
-        for _ in range(slot_per_ep):
-            k = np.random.randint(0,13)
-            temp.append(k)
-        print(sum(temp))
-        dataset.append(temp)
-        #print(len(temp))
+        plt.plot(x, pdf_value)
+        plt.title('Normal Distribution PDF')
+        plt.xlabel('time slots')
+        plt.ylabel('task numbers')
+        plt.show()
 
-
-    print(len(dataset))
-
-    # Specify the CSV file name for saving
-    csv_filename = 'mix_rush_hour_50pec.csv'
-    with open(csv_filename, mode='w', newline='') as csv_file:
-        csv_writer = csv.writer(csv_file)
-        for value in tqdm(dataset):
-            csv_writer.writerow(value)
-
-
-test1()
+y = 0.25
+percentage = f'{y:.0}'
+print(percentage)
