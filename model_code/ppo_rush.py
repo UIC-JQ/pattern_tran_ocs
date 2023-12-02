@@ -281,7 +281,7 @@ if __name__ == '__main__':
     per_time_list = []
     _,per_time_list, file_name= main()
 
-    csv_filename = 'per_time'+file_name+'.csv'
+    csv_filename = 'ppo_per_time'+file_name+'.csv'
     with open(csv_filename, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
         for value in tqdm(per_time_list):

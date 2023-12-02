@@ -261,7 +261,7 @@ def main():
     save_energy_ep = []
     save_time_ep = []
 
-    for i_epoch in tqdm(range(10000)):
+    for i_epoch in tqdm(range(1100)):
         # ppo
         ep_reward = []
         ep_energy = []
@@ -334,6 +334,7 @@ def main():
                 print("final min energy cost: ",np.mean(save_energy_ep[-100:]))
                 print("final min time cost: ",np.mean(save_time_ep[-100:]))
                 print("final reward: ",np.mean(return_reward_list[-100:]))
+                break
 
 
     return return_reward_list, save_per_time_list,env.file_name
@@ -341,7 +342,7 @@ def main():
 if __name__ == '__main__':
     per_slot_time = []
     _,per_slot_time,file_name = main()
-    csv_filename = 'per_time'+file_name+'.csv'
+    csv_filename = 'ours_per_time'+file_name+'.csv'
     with open(csv_filename, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
         for value in tqdm(per_slot_time):
