@@ -277,6 +277,7 @@ def main():
             env.env_up()
             # task不为空且 第一个task开始执行
             while env.task and env.task[0].start_time == env.time:
+            #Execute tasks generated in the same time slot during the loop execution.
                     cnt += 1
                     curr_task = env.task.pop(0)
                     # ----------ppo--------------
@@ -330,19 +331,18 @@ def main():
                 save_per_time_list.append(sum(ep_time))
     
                 # the output of the current episode
-                #print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), total_times_ep, total_energys_ep))
-                print("final min energy cost: ",np.mean(save_energy_ep[-100:]))
-                print("final min time cost: ",np.mean(save_time_ep[-100:]))
+                print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(ep_time), np.mean(ep_energy)))
+                print("final energy cost: ",np.mean(save_energy_ep[-100:]))
+                print("final time cost: ",np.mean(save_time_ep[-100:]))
                 print("final reward: ",np.mean(return_reward_list[-100:]))
                 break
-
+    
 
     return return_reward_list, save_per_time_list,env.file_name
             
 if __name__ == '__main__':
     per_slot_time = []
     _,per_slot_time,file_name = main()
-    
     csv_filename = 'ours_per_time'+file_name+'.csv'
     with open(csv_filename, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
