@@ -105,7 +105,7 @@ def gen3():
 def gen4():
     ep = 1100
     # ratio of pattern
-    ratio = 1
+    ratio = 0.25
     slot_per_ep = 200
     dataset = []
     for _ in range(int(ep*ratio)):
