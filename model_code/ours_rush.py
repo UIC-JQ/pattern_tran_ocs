@@ -342,14 +342,15 @@ def main():
 if __name__ == '__main__':
     per_slot_time = []
     _,per_slot_time,file_name = main()
+    
     csv_filename = 'ours_per_time'+file_name+'.csv'
     with open(csv_filename, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
-        for value in tqdm(per_slot_time):
-            csv_writer.writerow(value)
+        csv_writer.writerow(["iterations","time_slot_cost"])
+        for i,value in tqdm(enumerate(per_slot_time, start=1)):
+            csv_writer.writerow([i, value])
 
  
-
 
 
 

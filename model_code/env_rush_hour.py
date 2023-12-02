@@ -88,7 +88,7 @@ class Env:
         self.total_energy = 0
 
         self.task_finish_list = []
-        self.file_name = 'mix_rush_hour_0.75pec'
+        self.file_name = 'mix_rush_hour_0pec'
 
 
     def hour_reader(self):

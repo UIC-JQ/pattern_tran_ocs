@@ -6,7 +6,7 @@
 #SBATCH --time=2-00:00:00
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:a100-sxm4-80gb:1
-#SBATCH --output=slurm_log/disorder_ppo_rush_0.75pec.log
+#SBATCH --output=slurm_log/disorder_ours_rush_0pec.log
 
 
 # load module
@@ -14,4 +14,4 @@ module load miniconda3
 source activate py3.10
 
 # Run command
-python ./model_code/ppo_rush.py
+python ./model_code/ours_rush.py
