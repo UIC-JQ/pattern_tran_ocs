@@ -187,7 +187,7 @@ def main():
     save_time_ep = []
     save_per_time_list = []
 
-    for i_epoch in tqdm(range(5)):
+    for i_epoch in tqdm(range(1100)):
         #ppo
         ep_reward = []
         ep_energy = []

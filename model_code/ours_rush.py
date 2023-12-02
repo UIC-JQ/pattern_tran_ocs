@@ -261,7 +261,7 @@ def main():
     save_energy_ep = []
     save_time_ep = []
 
-    for i_epoch in tqdm(range(2)):
+    for i_epoch in tqdm(range(1100)):
         # ppo
         ep_reward = []
         ep_energy = []
