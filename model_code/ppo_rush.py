@@ -268,8 +268,8 @@ def main():
 
                 # the output of the current episode
                 #print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), total_times_ep, total_energys_ep))
-                print("final min energy cost: ",np.mean(save_energy_ep[-100:]))
-                print("final min time cost: ",np.mean(save_time_ep[-100:]))
+                print("final energy cost: ",np.mean(save_energy_ep[-100:]))
+                print("final time cost: ",np.mean(save_time_ep[-100:]))
                 print("final reward: ",np.mean(return_reward_list[-100:]))
 
 

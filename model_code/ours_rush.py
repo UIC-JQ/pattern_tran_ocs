@@ -332,8 +332,8 @@ def main():
     
                 # the output of the current episode
                 print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(ep_time), np.mean(ep_energy)))
-                print("final min energy cost: ",np.mean(save_energy_ep[-100:]))
-                print("final min time cost: ",np.mean(save_time_ep[-100:]))
+                print("final energy cost: ",np.mean(save_energy_ep[-100:]))
+                print("final time cost: ",np.mean(save_time_ep[-100:]))
                 print("final reward: ",np.mean(return_reward_list[-100:]))
                 break
     
@@ -343,7 +343,7 @@ def main():
 if __name__ == '__main__':
     per_slot_time = []
     _,per_slot_time,file_name = main()
-    
+
     csv_filename = 'ours_per_time'+file_name+'.csv'
     with open(csv_filename, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
