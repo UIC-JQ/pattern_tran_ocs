@@ -187,14 +187,12 @@ def main():
     save_time_ep = []
     save_per_time_list = []
 
-    for i_epoch in tqdm(range(1100)):
+    for i_epoch in tqdm(range(5)):
         #ppo
         ep_reward = []
         ep_energy = []
         ep_time = []
-
-
-
+        save_per_time_row = [] 
         ep_action_prob = 0
         env.reset(i_epoch) # reset the env
 
@@ -206,66 +204,66 @@ def main():
 
             while env.task and env.task[0].start_time == env.time:
             #Execute tasks generated in the same time slot during the loop execution.
-                    cnt += 1
-                    curr_task = env.task.pop(0)
-                    # ----------ppo--------------
-                    # get current state
-                    node_f,task_f  = env.get_obs(curr_task)
-                    # Select action at according to πθ (at | st )
-                    # action: node index -> TODO: {0, 1}
-                    # action_prob : 0
-                    action, action_prob = agent.select_action(curr_task,node_f,task_f)
-                    node_f = torch.tensor(node_f, dtype=torch.float).to(device)
-                    node_f = node_f.reshape(1,f_tran)
-                    task_f = torch.tensor(task_f, dtype=torch.float).to(device)
-                    task_f = task_f.reshape(1,f_task)
-                    state = torch.cat((node_f,task_f), dim=1)
-                    assert state.shape[1] == f_tran+f_task,f"the state shape is{state.shape}"
+                one_slot_time = []
+                cnt += 1
+                curr_task = env.task.pop(0)
+                # ----------ppo--------------
+                # get current state
+                node_f,task_f  = env.get_obs(curr_task)
+                # Select action at according to πθ (at | st )
+                # action: node index -> TODO: {0, 1}
+                # action_prob : 0
+                action, action_prob = agent.select_action(curr_task,node_f,task_f)
+                node_f = torch.tensor(node_f, dtype=torch.float).to(device)
+                node_f = node_f.reshape(1,f_tran)
+                task_f = torch.tensor(task_f, dtype=torch.float).to(device)
+                task_f = task_f.reshape(1,f_task)
+                state = torch.cat((node_f,task_f), dim=1)
+                assert state.shape[1] == f_tran+f_task,f"the state shape is{state.shape}"
 
-                    # 1.Execute action at and obtain the reward rt
-                    # 2.Get the next state st+1 
-                    node_f,task_f,reward,energy,time= env.step(curr_task, action)
-                    node_f = torch.tensor(node_f, dtype=torch.float).to(device)
-                    node_f = node_f.reshape(1,f_tran)
-                    task_f = torch.tensor(task_f, dtype=torch.float).to(device)
-                    task_f = task_f.reshape(1,f_task)
-                    next_state = torch.cat((node_f,task_f), dim=1)
-                    assert next_state.shape[1] == f_tran+f_task,f"the next state shape is{next_state.shape}"
-
-
-                    # PPO save data
-                    ep_reward.append(reward)
-
-                    ep_action_prob += action_prob
-                    ep_energy.append(energy)
-                    ep_time.append(time)
+                # 1.Execute action at and obtain the reward rt
+                # 2.Get the next state st+1 
+                node_f,task_f,reward,energy,time= env.step(curr_task, action)
+                node_f = torch.tensor(node_f, dtype=torch.float).to(device)
+                node_f = node_f.reshape(1,f_tran)
+                task_f = torch.tensor(task_f, dtype=torch.float).to(device)
+                task_f = task_f.reshape(1,f_task)
+                next_state = torch.cat((node_f,task_f), dim=1)
+                assert next_state.shape[1] == f_tran+f_task,f"the next state shape is{next_state.shape}"
 
 
-                    # Store transition (st , at , rt , st+1 ) in D
-                    trans = Transition(state, action, reward, action_prob, next_state)
+                # PPO save data
+                ep_reward.append(reward)
 
-                    # for training step ....
-                    if agent.store_transition(trans):
-                        ac_loss, v_loss = agent.update()
-                        value_loss.append(v_loss)
-                        policy_loss.append(ac_loss)
-                        # print('ac_loss', ac_loss)
-                        # print('v_loss', v_loss)
-                    # ----------ppo--------------
-                    
+                ep_action_prob += action_prob
+                ep_energy.append(energy)
+                ep_time.append(time)
+                one_slot_time.append(time)
 
 
+
+                # Store transition (st , at , rt , st+1 ) in D
+                trans = Transition(state, action, reward, action_prob, next_state)
+
+                # for training step ....
+                if agent.store_transition(trans):
+                    ac_loss, v_loss = agent.update()
+                    value_loss.append(v_loss)
+                    policy_loss.append(ac_loss)
+                    # print('ac_loss', ac_loss)
+                    # print('v_loss', v_loss)
+                # ----------ppo--------------
+
+            save_per_time_row.append(sum(one_slot_time))
+            one_slot_time = []
             if not env.task: # in one episode, tasks have been consumed, save the data."
 
                 #save data
                 return_reward_list.append(np.mean(ep_reward))
                 save_energy_ep.append(np.mean(ep_energy))
                 save_time_ep.append(np.mean(ep_time))
-
-                save_per_time_list.append(sum(ep_time))
-    
-
-
+                save_per_time_list.append(save_per_time_row)
+                
                 # the output of the current episode
                 #print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), total_times_ep, total_energys_ep))
                 print("final energy cost: ",np.mean(save_energy_ep[-100:]))
@@ -284,9 +282,8 @@ if __name__ == '__main__':
     csv_filename = 'ppo_per_time'+file_name+'.csv'
     with open(csv_filename, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(["iterations","time_slot_cost"])
-        for i,value in tqdm(enumerate(per_time_list, start=1)):
-            csv_writer.writerow([i, value])
+        for value in tqdm(per_time_list):
+            csv_writer.writerow(value)
 
  
  
