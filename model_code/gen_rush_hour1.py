@@ -103,42 +103,67 @@ def gen3():
             csv_writer.writerow(value)
 
 def gen4():
-    ep = 1100
+    ep = 1
     # ratio of pattern
-    ratio = 0.25
+    ratio = 1
     slot_per_ep = 200
     dataset = []
     for _ in range(int(ep*ratio)):
         x = np.linspace(1, slot_per_ep, slot_per_ep)
-        mu, sigma = np.random.uniform()*200, np.random.uniform()*80
+        #mu, sigma = np.random.uniform()*200, np.random.uniform()*80
+        mu, sigma = 100, np.random.uniform(0.5, 1.0)*60
         pdf_value = norm.pdf(x, mu, sigma) 
         pdf_value = np.round(pdf_value*1000)
 
         dataset.append(pdf_value)
         #print(len(pdf_value))
     #     print(sum(pdf_value))
-    # plt.plot(x, pdf_value)
-    # plt.title('Normal Distribution PDF')
-    # plt.xlabel('Values')
-    # plt.ylabel('Probability Density')
-    # plt.show()
-    for _ in range(int(ep*(1-ratio))):
-        temp = []
-        for _ in range(slot_per_ep):
-            k = np.random.randint(0,13)
-            temp.append(k)
-        #print(sum(temp))
-        dataset.append(temp)
-        #print(len(temp))
-    np.random.shuffle(dataset)
+    plt.plot(x, pdf_value)
+    plt.title('Normal Distribution PDF')
+    plt.xlabel('Values')
+    plt.ylabel('Probability Density')
+    plt.show()
+    # for _ in range(int(ep*(1-ratio))):
+    #     temp = []
+    #     for _ in range(slot_per_ep):
+    #         k = np.random.randint(0,13)
+    #         temp.append(k)
+    #     #print(sum(temp))
+    #     dataset.append(temp)
+    #     #print(len(temp))
+    # np.random.shuffle(dataset)
 
 
     # Specify the CSV file name for saving
-    csv_filename = 'mix_rush_hour_{}pec.csv'.format(ratio)
+    # csv_filename = 'mix_rush_hour_{}pec.csv'.format(ratio)
+    # with open(csv_filename, mode='w', newline='') as csv_file:
+    #     csv_writer = csv.writer(csv_file)
+    #     for value in tqdm(dataset):
+    #         csv_writer.writerow(value)
+
+def gen5():
+    ep = 1100
+    dataset = []
+    slot_per_ep = 200
+    mu_values = [0, 0, 50, 50, 100, 100, 150, 150, 200, 200]
+    sigma_values = [20, 60, 20, 60, 20, 60, 20, 60, 20, 60]
+   
+    for i in range(len(mu_values)):
+        for _ in range(int(ep/len(mu_values))):
+            mu = mu_values[i]
+            sigma = sigma_values[i]
+            x = np.linspace(1, slot_per_ep, slot_per_ep)
+            pdf_value = norm.pdf(x, mu, sigma) 
+            pdf_value = np.round(pdf_value*1000)
+            pdf_value = np.insert(pdf_value,0,i)
+            dataset.append(pdf_value)
+
+    np.random.shuffle(dataset)
+
+    # Specify the CSV file name for saving
+    csv_filename = 'time_slot_trend.csv'
     with open(csv_filename, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
         for value in tqdm(dataset):
             csv_writer.writerow(value)
-
-
-gen4()
+gen5()

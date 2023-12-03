@@ -61,7 +61,7 @@ class DQN:
     batch_size = 300
     
     def __init__(self):
-        self.gamma = 0.98 # 折扣因子
+        self.gamma = 0.98 # discount factor
         self.epsilon = 0.01 # epsilon-greedy
         self.target_update = 10 # target network update frequency
         self.q_net = Qnet() # Q-net
@@ -86,13 +86,11 @@ class DQN:
     def store_transition(self, transition):
         self.buffer.append(transition)
         self.counter += 1
-        return self.counter > self.size_min == 0
+        return self.counter > self.size_min
     
     def update(self):
 
         state = torch.tensor([t.state for t in self.buffer],dtype=torch.float).to(device)
-        # state = torch.stack(state)
-        
         action = torch.tensor([t.action for t in self.buffer], dtype=torch.long).view(-1, 1).to(device)
         action_zero = torch.ones_like(action)
         action_zero[action == 0] = 0
@@ -110,7 +108,6 @@ class DQN:
    
                 # temporal difference error target
                 # q_targets = reward[index] + self.gamma * max_next_q_values * (1 - dones)  
-
                 q_targets = reward[index] + self.gamma * max_next_q_values # Not setting the final state
                 
                 # loss function
@@ -123,36 +120,19 @@ class DQN:
 
         if self.update_count % self.target_update == 0:
             self.target_q_net.load_state_dict(
-                self.q_net.state_dict())  # 更新目标网络
+                self.q_net.state_dict())  
         self.update_count += 1
-
-
         print("loss is, ",np.mean(dqn_losses))
         return np.mean(dqn_losses)
 
-def store_data_baseline(t_list,group_size):
-    l_result = []
-    # 定义每个组的大小
-    # 循环遍历列表
-    for i in range(0, len(t_list), group_size):
-        group = t_list[i:i + group_size]  # 获取当前组
-        group_avg = sum(group)/group_size  # 计算当前组的总和
-        l_result.append(group_avg)  # 将总和添加到结果列表中
-
-    return l_result
 
 def main():
     agent = DQN()
 
     return_list = []
-    #保存优化的值
-    total_times = []
-    total_energys = []
-    #保存loss
     save_loss = []
 
-
-    #选择最小的打出来
+    # save data
     save_energy_ep = []
     save_time_ep = []
 
@@ -169,58 +149,50 @@ def main():
         for t in count():
             # done, upgrade, idx = env.env_up()
             env.env_up()
-            # task不为空且 第一个task开始执行
-
             while env.task and env.task[0].start_time == env.time:
-            #循环内说明正在执行某一个时段内同时产生的任务，cnt从进入到出循环差值小于13
-                    cnt += 1
-                    curr_task = env.task.pop(0)
-                    # ----------ppo--------------
-                    # get current state
-                    state = env.get_obs(curr_task)
 
-                    # Select action at according to πθ (at | st )
-                    action = agent.select_action(curr_task,state)
+                cnt += 1
+                curr_task = env.task.pop(0)
+                # ----------ppo--------------
+                # get current state
+                state = env.get_obs(curr_task)
 
-                    # 1.Execute action at and obtain the reward rt
-                    # 2.Get the next state st+1 
-                    next_state,reward,energy,time= env.step(curr_task, action)
+                # Select action at according to πθ (at | st )
+                action = agent.select_action(curr_task,state)
 
-                    # PPO save data
-                    ep_reward.append(reward)
-                    ep_energy.append(energy)
-                    ep_time.append(time)
+                # 1.Execute action at and obtain the reward rt
+                # 2.Get the next state st+1 
+                next_state,reward,energy,time= env.step(curr_task, action)
 
-                    # Store transition (st , at , rt , st+1 ) in D
-                    trans = Transition(state, action, reward, next_state)
+                # PPO save data
+                ep_reward.append(reward)
+                ep_energy.append(energy)
+                ep_time.append(time)
 
-                    # for training step ....
-                    if agent.store_transition(trans):
-                        dqn_loss = agent.update()
-                        save_loss.append(dqn_loss)
-                        
-                    # ----------ppo-------------- 
+                # Store transition (st , at , rt , st+1 ) in D
+                trans = Transition(state, action, reward, next_state)
+
+                # for training step ....
+                if agent.store_transition(trans):
+                    dqn_loss = agent.update()
+                    save_loss.append(dqn_loss)
+                    
+                # ----------ppo-------------- 
 
 
             if not env.task: #queue里的task耗尽，计算所有数值
                 return_list.append(np.mean(ep_reward))
-                
-                # total_times.append(env.total_time/cnt)
-                # total_energys.append(env.total_energy/cnt)
-                # total_energys.append(env.total_energy/cnt)
-
+                print("here")
+                exit(0)
                 #ppo
-                total_times_ep = []
-                total_energys_ep = []
-                total_energys_ep = store_data_baseline(ep_energy,cnt)
-                total_times_ep = store_data_baseline(ep_time,cnt)
+                save_energy_ep.append(np.mean(ep_energy))
+                save_time_ep.append(np.mean(ep_time))
 
-                #抽取最近的50个数的均值作为输出 -->可以改为不用均值直接最小
-                save_energy_ep.append(np.mean(total_energys_ep))
-                save_time_ep.append(np.mean(total_times_ep))
-                print('Episode: {}, reward: {}, total_time: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(total_times_ep[-50:])))
-                print("final result energy cost: ",min(save_energy_ep[-50:]))
-                print("final result time cost: ",min(save_time_ep[-50:]))
+                # the output of the current episode
+                print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), np.mean(ep_time), np.mean(ep_energy)))
+                print("final energy cost: ",np.mean(save_energy_ep[-100:]))
+                print("final time cost: ",np.mean(save_time_ep[-100:]))
+
                 break
     return return_list  
             
@@ -228,30 +200,6 @@ if __name__ == '__main__':
 
     _ = main()
 
-    # 指定要保存的CSV文件名
-    # csv_filename1 = 'v_loss_data.csv'
-    # csv_filename2 = 'ac_loss_data.csv'
-    # # 将数组逐行写入CSV文件
-    # with open(csv_filename, mode='w', newline='') as csv_file:
-    #     csv_writer = csv.writer(csv_file)
-    #     csv_writer.writerow(["iterations","reward"])
-    #     for i, value in tqdm(enumerate(reward, start=1)):
-    #         csv_writer.writerow([i, value])
-
-    #print(len(V_Loss))
-    # with open(csv_filename1, mode='w', newline='') as csv_file:
-    #     csv_writer = csv.writer(csv_file)
-    #     csv_writer.writerow(["iterations","value_loss"])
-    #     for i, value in tqdm(enumerate(V_Loss, start=1)):
-    #         csv_writer.writerow([i, value])
-    
-
-    # with open(csv_filename2, mode='w', newline='') as csv_file:
-    #     csv_writer = csv.writer(csv_file)
-    #     csv_writer.writerow(["iterations","ac_loss"])
-    #     for i, value in tqdm(enumerate(P_Loss, start=1)):
-    #         csv_writer.writerow([i, value])
-    
 
 
  
