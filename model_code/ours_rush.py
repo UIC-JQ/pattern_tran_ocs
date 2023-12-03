@@ -8,7 +8,7 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 import sys
 from collections import namedtuple
 from itertools import count
-from env_rush_hour import Env
+from env_rush_hour_slot import Env
 import config
 
 import csv
@@ -261,7 +261,7 @@ def main():
     save_energy_ep = []
     save_time_ep = []
 
-    for i_epoch in tqdm(range(1100)):
+    for i_epoch in tqdm(range(2)):
         # ppo
         ep_reward = []
         ep_energy = []
@@ -272,13 +272,13 @@ def main():
         # Reset environment 
         env.reset(i_epoch) 
         cnt = 0
+        one_slot_time = []
         for t in count():
             # done, upgrade, idx = env.env_up()
             env.env_up()
             # task不为空且 第一个task开始执行
             while env.task and env.task[0].start_time == env.time:
             #Execute tasks generated in the same time slot during the loop execution.
-                one_slot_time = []
                 cnt += 1
                 curr_task = env.task.pop(0)
                 # ----------ppo--------------
@@ -330,6 +330,7 @@ def main():
                 return_reward_list.append(np.mean(ep_reward))
                 save_energy_ep.append(np.mean(ep_energy))
                 save_time_ep.append(np.mean(ep_time))
+                save_per_time_row.insert(0,env.id_column[i_epoch])
                 save_per_time_list.append(save_per_time_row)
     
                 # the output of the current episode

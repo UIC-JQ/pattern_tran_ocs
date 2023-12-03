@@ -154,7 +154,7 @@ class Env:
                     x = random.random()*config.max_x,
                     y = random.random()*config.max_y,
                     task_size=random.random()*config.task_size_max/1000))
-
+                
         # 初始化cache
         self.lfu_cache_image = {i:LFU() for i in range(self.node_num)}
 

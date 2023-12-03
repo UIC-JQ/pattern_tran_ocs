@@ -8,7 +8,7 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 import sys
 from collections import namedtuple
 from itertools import count
-from env_rush_hour import Env
+from env_rush_hour_slot import Env
 import config
 
 import csv
@@ -187,7 +187,7 @@ def main():
     save_time_ep = []
     save_per_time_list = []
 
-    for i_epoch in tqdm(range(1100)):
+    for i_epoch in tqdm(range(10)):
         #ppo
         ep_reward = []
         ep_energy = []
@@ -197,14 +197,13 @@ def main():
         env.reset(i_epoch) # reset the env
 
         cnt = 0 #the task number in one ep
+        one_slot_time = []
         for t in count():
             # done, upgrade, idx = env.env_up()
             env.env_up()
             # task不为空且 第一个task开始执行
-
             while env.task and env.task[0].start_time == env.time:
             #Execute tasks generated in the same time slot during the loop execution.
-                one_slot_time = []
                 cnt += 1
                 curr_task = env.task.pop(0)
                 # ----------ppo--------------
@@ -262,15 +261,15 @@ def main():
                 return_reward_list.append(np.mean(ep_reward))
                 save_energy_ep.append(np.mean(ep_energy))
                 save_time_ep.append(np.mean(ep_time))
+                save_per_time_row.insert(0,env.id_column[i_epoch])
                 save_per_time_list.append(save_per_time_row)
                 
+
                 # the output of the current episode
                 #print('Episode: {}, reward: {}, total_time: {}, total_energy: {}'.format(i_epoch, round(np.mean(ep_reward), 3), total_times_ep, total_energys_ep))
                 print("final energy cost: ",np.mean(save_energy_ep[-100:]))
                 print("final time cost: ",np.mean(save_time_ep[-100:]))
                 print("final reward: ",np.mean(return_reward_list[-100:]))
-
-
                 break
 
     return return_reward_list, save_per_time_list, env.file_name
